@@ -151,21 +151,24 @@ routerUsers.post('/login', async (req, res) => {
             return res.status(401).json({ message: "Invalid username or password" });
         }
 
-        // Generate JWT Token
-        const token = jwt.sign({
-            userId: user._id,
-            email: user.email
-        },
-        "1234!@#%<{*&)",
-        {
-            expiresIn: "24h",
-        });
+        console.log('email, password, passwordMatch', email, password, passwordMatch);
 
-        res.cookie("auth", token, {
-            httpOnly: true, // ✅ Prevents client-side access
-            secure: true, // ✅ Use HTTPS in production
-            sameSite: "Strict" // ✅ Prevents CSRF attacks
-        });
+        // // Generate JWT Token
+        // const token = jwt.sign({
+        //     userId: user._id,
+        //     email: user.email
+        // },
+        // "1234!@#%<{*&)",
+        // {
+        //     expiresIn: "24h",
+        // });
+
+        // console.log({token});
+        // res.cookie("auth", token, {
+        //     httpOnly: true, // ✅ Prevents client-side access
+        //     secure: true, // ✅ Use HTTPS in production
+        //     sameSite: "Strict" // ✅ Prevents CSRF attacks
+        // });
 
         return res
             .status(200)
