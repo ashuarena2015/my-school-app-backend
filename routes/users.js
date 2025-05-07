@@ -291,7 +291,7 @@ routerUsers.get("/adminInfo", async (req, res) => {
                 counter,
                 branches,
                 adminRoles: adminRoles[0]?.roles,
-                classes: classes[0].classes,
+                classes: classes[0]?.classes,
                 subjects: subjects[0]?.subjectClass,
                 getBirthDayInMonth: getBirthDayInMonth
             });
