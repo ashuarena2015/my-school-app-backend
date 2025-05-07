@@ -144,6 +144,7 @@ routerUsers.post('/login', async (req, res) => {
 
         // Check If User Exists In The Database
         const user = await User.findOne({ email });
+        console.log({user});
         // Compare Passwords
         const passwordMatch = await bcrypt.compare(password, user.password);
 
