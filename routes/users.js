@@ -285,17 +285,29 @@ routerUsers.get("/adminInfo", async (req, res) => {
             counter[key] = count;
         });
 
-        Promise.all([permissions, userCounter, branches, adminRoles, classes, subjects, getBirthDayInMonth ]).then(() => {
+        Promise.all([
+            permissions(),      // assuming this is a function that returns a promise
+            userCounter(),      // same here
+            branches(),         
+            adminRoles(),
+            classes(),
+            subjects(),
+            getBirthDayInMonth()
+        ]).then(([permissionsRes, counter, branches, adminRolesRes, classesRes, subjectsRes, birthDayInMonth]) => {
+            console.log({permissionsRes, counter, branches, adminRolesRes, classesRes, subjectsRes, birthDayInMonth});
             res.json({
-                permissions: permissions[0]?.permissions,
+                permissions: permissionsRes?.permissions,
                 counter,
                 branches,
-                adminRoles: adminRoles[0]?.roles,
-                classes: classes[0]?.classes,
-                subjects: subjects[0]?.subjectClass,
-                getBirthDayInMonth: getBirthDayInMonth
+                adminRoles: adminRolesRes?.roles,
+                classes: classesRes?.classes,
+                subjects: subjectsRes?.subjectClass,
+                getBirthDayInMonth: birthDayInMonth
             });
-        });
+        }).catch((err) => {
+            console.error("Error in Promise.all:", err);
+            res.status(500).json({ error: "Failed to load data" });
+        });        
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
