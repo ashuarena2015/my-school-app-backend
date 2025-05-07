@@ -230,12 +230,12 @@ routerUsers.get("/permissions", async (req, res) => {
 
 routerUsers.get("/adminInfo", async (req, res) => {
     try {
-
         const branches = await SchoolBranch.find({});
         const subjects = await SchoolSubjects.find({});
         const classes = await SchoolClasses.find({});
         const adminRoles = await AdminRoles.find({});
         const permissions = await AdminPermission.find({});
+        
         const userCounter = await User.aggregate([
             {
               $match: {
@@ -276,44 +276,29 @@ routerUsers.get("/adminInfo", async (req, res) => {
                   _id: 0 // Exclude _id field if not needed
                 }
             }
-          ]);
-        const counter = {};
+        ]);
 
+        const counter = {};
         userCounter.forEach(({ _id, count }) => {
-            // Pluralize if needed
             const key = _id?.endsWith('s') ? _id : _id + 's';
             counter[key] = count;
         });
 
-        Promise.all([
-            permissions(),      // assuming this is a function that returns a promise
-            userCounter(),      // same here
-            branches(),         
-            adminRoles(),
-            classes(),
-            subjects(),
-            getBirthDayInMonth()
-        ]).then(([permissionsRes, counter, branches, adminRolesRes, classesRes, subjectsRes, birthDayInMonth]) => {
-            console.log({permissionsRes, counter, branches, adminRolesRes, classesRes, subjectsRes, birthDayInMonth});
-            res.json({
-                permissions: permissionsRes?.permissions,
-                counter,
-                branches,
-                adminRoles: adminRolesRes?.roles,
-                classes: classesRes?.classes,
-                subjects: subjectsRes?.subjectClass,
-                getBirthDayInMonth: birthDayInMonth
-            });
-        }).catch((err) => {
-            console.error("Error in Promise.all:", err);
-            res.status(500).json({ error: "Failed to load data" });
-        });        
+        res.json({
+            permissions: permissions[0]?.permissions || [],
+            counter,
+            branches,
+            adminRoles: adminRoles[0]?.roles || [],
+            classes: classes[0]?.classes || [],
+            subjects: subjects[0]?.subjectClass || [],
+            getBirthDayInMonth
+        });
+
     } catch (error) {
+        console.error("Error in /adminInfo:", error);
         res.status(500).json({ error: error.message });
     }
 });
-
-
 
 routerUsers.route("/class-teacher")
     .post(async (req, res) => {
