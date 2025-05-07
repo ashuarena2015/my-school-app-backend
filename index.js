@@ -18,54 +18,54 @@ const { routerFee } = require('./routes/fee');
 const { routerSchool } = require('./routes/school');
 
 const MONGO_URI_LOCAL = "mongodb://127.0.0.1:27017/my-academy";
+const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 /*** FOR MIGRATION ONLY
  * 
  */
 // const uri = "mongodb+srv://<db_username>:<db_password>@cluster0.teyrnb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-const localUri = MONGO_URI_LOCAL;
-const cloudUri = MONGO_URI_CLOUD;
+// const localUri = MONGO_URI_LOCAL;
+// const cloudUri = MONGO_URI_CLOUD;
 
-const migrate = async () => {
-  const localClient = new MongoClient(localUri);
-  const cloudClient = new MongoClient(cloudUri);
+// const migrate = async () => {
+//   const localClient = new MongoClient(localUri);
+//   const cloudClient = new MongoClient(cloudUri);
 
-try {
-  await localClient.connect();
-  await cloudClient.connect();
+// try {
+//   await localClient.connect();
+//   await cloudClient.connect();
 
-  const localDB = localClient.db("my-academy");
-  const cloudDB = cloudClient.db("my-academy");
+//   const localDB = localClient.db("my-academy");
+//   const cloudDB = cloudClient.db("my-academy");
 
-  const collections = await localDB.listCollections().toArray();
+//   const collections = await localDB.listCollections().toArray();
 
-  const data = await localDB.collection("users").find().toArray();
-  for (const { name } of collections) {
-    console.log(`Migrating collection: ${name}`);
+//   const data = await localDB.collection("users").find().toArray();
+//   for (const { name } of collections) {
+//     console.log(`Migrating collection: ${name}`);
 
-    const data = await localDB.collection(name).find().toArray();
+//     const data = await localDB.collection(name).find().toArray();
 
-    if (data.length > 0) {
-      await cloudDB.collection(name).deleteMany({}); // Optional: clear target first
-      await cloudDB.collection(name).insertMany(data);
-      console.log(`✅ Migrated ${data.length} documents to "${name}"`);
-    } else {
-      console.log(`⚠️ Collection "${name}" is empty. Skipped.`);
-    }
-  }
+//     if (data.length > 0) {
+//       await cloudDB.collection(name).deleteMany({}); // Optional: clear target first
+//       await cloudDB.collection(name).insertMany(data);
+//       console.log(`✅ Migrated ${data.length} documents to "${name}"`);
+//     } else {
+//       console.log(`⚠️ Collection "${name}" is empty. Skipped.`);
+//     }
+//   }
 
-  console.log("🎉 Migration complete!");
-  } catch (err) {
-    console.error("❌ Migration failed:", err);
-  } finally {
-    await localClient.close();
-    await cloudClient.close();
-  };
-}
+//   console.log("🎉 Migration complete!");
+//   } catch (err) {
+//     console.error("❌ Migration failed:", err);
+//   } finally {
+//     await localClient.close();
+//     await cloudClient.close();
+//   };
+// }
 
-migrate();
+// migrate();
 
 /*
 
@@ -86,12 +86,15 @@ mongoose
     console.error("❌ MongoDB Connection Error:", err);
   });
 
-app.use(
-  cors({
-    origin: "http://localhost:8081", // React frontend URL
-    credentials: true, // Allow cookies
-  }),
-);
+  app.use(
+    cors({
+      origin: function (origin, callback) {
+        callback(null, origin || true); // Allow all origins dynamically
+      },
+      credentials: true,
+    }),
+  );
+  
 
 const port = 3001;
 
