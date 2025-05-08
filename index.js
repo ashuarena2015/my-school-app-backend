@@ -18,7 +18,7 @@ const { routerFee } = require('./routes/fee');
 const { routerSchool } = require('./routes/school');
 
 const MONGO_URI_LOCAL = "mongodb://127.0.0.1:27017/my-academy";
-const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mongodb.net/my-academy?retryWrites=true&w=majority&appName=Cluster0";
 
 /*** FOR MIGRATION ONLY
  * 
@@ -72,19 +72,30 @@ const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mong
 *****/
 
 // ✅ Fix: Set a proper connection timeout
-mongoose
-  .connect(MONGO_URI_CLOUD, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000, // ⏳ Wait 5 sec before failing
-    connectTimeoutMS: 10000, // ⏳ Timeout after 10 sec
-  })
-  .then(() => {
-    console.log("✅ MongoDB Connected");
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err);
-  });
+// mongoose
+//   .connect(MONGO_URI_LOCAL, {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//     serverSelectionTimeoutMS: 5000, // ⏳ Wait 5 sec before failing
+//     connectTimeoutMS: 10000, // ⏳ Timeout after 10 sec
+//   })
+//   .then(() => {
+//     console.log("✅ MongoDB Connected");
+//   })
+//   .catch((err) => {
+//     console.error("❌ MongoDB Connection Error:", err);
+//   });
+
+mongoose.connect(MONGO_URI_CLOUD, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log("✅ MongoDB connected:", mongoose.connection.name);
+})
+.catch(err => {
+  console.error("❌ Connection error:", err);
+});
 
   app.use(
     cors({
@@ -102,6 +113,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+console.log(mongoose.connection.name); 
 
 app.use("/api/school", routerSchool);
 app.use("/api/user", routerUsers);
