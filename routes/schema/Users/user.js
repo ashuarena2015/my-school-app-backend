@@ -2,20 +2,30 @@ const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
   {
-    branch: { type: String, required: true },
+    branch: {
+      type: String,
+      required: function () {
+        return this.kind === "UserRegister"; // only required if kind is 'UserRegister'
+      },
+    },
     email: { type: String, required: true, unique: true },
     password: {
       type: String,
       required: function () {
-        return this.kind === "UserRegister";
+        return this.kind === "UserRegister"; // only required if kind is 'UserRegister'
       },
-    }, // Required only for registration
+    },
     userId: { type: String, unique: true },
     firstName: { type: String },
     lastName: { type: String },
     dob: { type: String },
     address: { type: String },
-    userType: { type: String },
+    userType: {
+      type: String,
+      required: function () {
+        return this.kind === "UserRegister"; // only required if kind is 'UserRegister'
+      },
+    },
     phone: { type: Number },
     alternatePhone: { type: String },
     fatherName: { type: String },
@@ -29,23 +39,25 @@ const UserSchema = new mongoose.Schema(
     designation: { type: String },
     gender: { type: String },
     subjectInClass: { type: Array, default: [] },
-    classTeacherOf: { type: String }
+    classTeacherOf: { type: String },
+    verify_otp: {type: Number},
+    isVerified: { type: Boolean, default: false },
   },
-  { timestamps: true, discriminatorKey: "kind" },
+  { timestamps: true, discriminatorKey: "kind", collection: "users" },
 );
 
+// Base model
 const User = mongoose.model("User", UserSchema);
 
-// 🔹 Register Schema (Subset for /register)
+// Discriminator model for registration (extends User)
 const UserRegister = User.discriminator(
   "UserRegister",
   new mongoose.Schema(
     {
-      email: { type: String, required: true },
-      password: { type: String, required: true },
-      designation: { type: String, required: true },
-      branch: { type: String, required: true },
-    }
+      email: { type: String, required: true, unique: true },
+      // Password and branch is already handled in base schema with condition on `kind`
+    },
+    { _id: false } // Avoid duplicate _id field in discriminator
   )
 );
 

@@ -10,6 +10,9 @@ import { MongoClient } from "mongodb";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+const http = require("http");
+const { Server } = require("socket.io");
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -17,74 +20,10 @@ const { routerUsers } = require('./routes/users');
 const { routerFee } = require('./routes/fee');
 const { routerSchool } = require('./routes/school');
 
-const MONGO_URI_LOCAL = "mongodb://127.0.0.1:27017/my-academy";
-const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mongodb.net/my-academy?retryWrites=true&w=majority&appName=Cluster0";
+const { SchoolNotifications } = require('./routes/schema/School/school');
 
-/*** FOR MIGRATION ONLY
- * 
- */
-// const uri = "mongodb+srv://<db_username>:<db_password>@cluster0.teyrnb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
-// const localUri = MONGO_URI_LOCAL;
-// const cloudUri = MONGO_URI_CLOUD;
-
-// const migrate = async () => {
-//   const localClient = new MongoClient(localUri);
-//   const cloudClient = new MongoClient(cloudUri);
-
-// try {
-//   await localClient.connect();
-//   await cloudClient.connect();
-
-//   const localDB = localClient.db("my-academy");
-//   const cloudDB = cloudClient.db("my-academy");
-
-//   const collections = await localDB.listCollections().toArray();
-
-//   const data = await localDB.collection("users").find().toArray();
-//   for (const { name } of collections) {
-//     console.log(`Migrating collection: ${name}`);
-
-//     const data = await localDB.collection(name).find().toArray();
-
-//     if (data.length > 0) {
-//       await cloudDB.collection(name).deleteMany({}); // Optional: clear target first
-//       await cloudDB.collection(name).insertMany(data);
-//       console.log(`✅ Migrated ${data.length} documents to "${name}"`);
-//     } else {
-//       console.log(`⚠️ Collection "${name}" is empty. Skipped.`);
-//     }
-//   }
-
-//   console.log("🎉 Migration complete!");
-//   } catch (err) {
-//     console.error("❌ Migration failed:", err);
-//   } finally {
-//     await localClient.close();
-//     await cloudClient.close();
-//   };
-// }
-
-// migrate();
-
-/*
-
-*****/
-
-// ✅ Fix: Set a proper connection timeout
-// mongoose
-//   .connect(MONGO_URI_LOCAL, {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true,
-//     serverSelectionTimeoutMS: 5000, // ⏳ Wait 5 sec before failing
-//     connectTimeoutMS: 10000, // ⏳ Timeout after 10 sec
-//   })
-//   .then(() => {
-//     console.log("✅ MongoDB Connected");
-//   })
-//   .catch((err) => {
-//     console.error("❌ MongoDB Connection Error:", err);
-//   });
+// const MONGO_URI_LOCAL = "mongodb://127.0.0.1:27017/signups-testing";
+const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mongodb.net/my-academy?retryWrites=true&w=majority&appName=Cluster0"
 
 mongoose.connect(MONGO_URI_CLOUD, {
   useNewUrlParser: true,
@@ -107,6 +46,7 @@ mongoose.connect(MONGO_URI_CLOUD, {
   );
   
 
+const server = http.createServer(app);
 const port = 3001;
 
 app.use(express.json());
@@ -120,6 +60,42 @@ app.use("/api/school", routerSchool);
 app.use("/api/user", routerUsers);
 app.use("/api/fee", routerFee);
 
-app.listen(port, () => {
-  console.log("Listening on 3001");
+const io = new Server(server, {
+  cors: {
+    origin: "*", // allow all for dev
+    methods: ["GET", "POST"],
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("send_message", (data) => {
+    console.log("Message received:", data);
+    io.emit("notification", data.message !== '');
+    const response = new SchoolNotifications({
+      message: data.message || 'Test message',
+      date: new Date(),
+    });
+    response.save()
+      .then(() => {
+        console.log("Notification saved successfully");
+      })
+      .catch((error) => {
+        console.error("Error saving notification:", error);
+      }
+    );
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+// app.listen(port, '192.168.1.10', () => {
+//   console.log("Listening on 3001");
+// });
+
+server.listen(port, '192.168.1.10', () => {
+  console.log("✅ Server and WebSocket listening on http://192.168.1.10:3001");
 });

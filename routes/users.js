@@ -8,16 +8,32 @@ const routerUsers = express.Router();
 const jwt = require('jsonwebtoken');
 const { verifyToken } = require('./isAuth');
 const { User, UserRegister } = require('./schema/Users/user');
+// const { AccountCreation } = require('./schema/Users/accounts');
 const { AdminPermission, AdminRoles } = require('./schema/Users/permission');
-const { SchoolBranch, SchoolClasses, SchoolSubjects, SchoolSubjectClassTeacher, SchoolStudentAttendance } = require('./schema/School/school');
+const { SchoolBranch, SchoolClasses, SchoolSubjects, SchoolSubjectClassTeacher,
+  SchoolStudentAttendance, SchoolNotifications } = require('./schema/School/school');
 
 const fs = require('fs');
 const path = require("path");
 const multer = require("multer");
 const sharp = require("sharp");
+const { verify } = require('crypto');
+const nodemailer = require('nodemailer');
 
 // const UserLogin = require('./schema/Users/userLogin');
 // const UserRegister = require('./schema/Users/userRegister');
+
+// Gmail app passoword: MailSender / cued eiag suuv ybzq
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'ashuarena@gmail.com',
+      pass: 'cued eiag suuv ybzq' // Use App Passwords, not your Gmail password
+    }
+  });
+
+const isProd = process.env.NODE_ENV === 'production';
 
 routerUsers.post("/", async (req, res) => {
     try {
@@ -34,7 +50,7 @@ routerUsers.post("/", async (req, res) => {
             const query = designation ? { designation }
             : {
                 designation: {
-                    $nin: ['', null, 'student'],
+                    $nin: ['', null, ''],
                     $exists: true
                 }
             };
@@ -58,24 +74,133 @@ routerUsers.post("/", async (req, res) => {
 routerUsers.get('/auth', verifyToken, async (req, res) => {
     try {
         const existingUser = await User.findOne({ email: req.user?.email });
-        return res
-            .status(200)
-            .json({
-                user: existingUser,
-            });
+        return res.status(200).json({ user: existingUser });
     } catch (error) {
-        return res
-            .status(403)
-            .json({error: error?.errmsg});
+        console.error("Auth error:", error);
+        return res.status(403).json({ error: error?.message || 'Something went wrong' });
     }
-})
+});
 
 // Generate Unique Student ID
+// Generate Unique Student ID based on count
 const generateUserId = async (designation) => {
-    const lastUser = await UserRegister.findOne().sort({ createdAt: -1 });
-    const lastId = lastUser ? parseInt(lastUser.userId.slice(3)) : 0;
-    return designation === '' ? `STU${lastId + 1}` : `ADM${lastId + 1}`;
+    const count = await UserRegister.countDocuments();
+    const nextId = count + 1;
+
+    return designation === 'student'
+        ? `STUDENT_${nextId}`
+        : `ADMIN_${nextId}`;
 };
+
+
+routerUsers.post("/account", async (req, res) => {
+    try {
+      const { email, password, branch, userType, verifyOtp } = req.body.userInfo;
+  
+      if (!email || !password) {
+        return res.status(400).send({ message: "Please provide correct credentials." });
+      }
+  
+      const user = await User.findOne({ email });
+      const otp = Math.floor(100000 + Math.random() * 900000);
+
+      if (!user) {
+  
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+  
+        const newUser = new UserRegister({
+          email,
+          password: hashedPassword,
+          branch,
+          verify_otp: otp,
+          isVerified: false,
+          userId: await generateUserId(userType), // Generate unique ID
+          userType,
+          kind: "UserRegister", // ✅ required for discriminator
+        });
+  
+        await newUser.save();
+
+        await transporter.sendMail({
+            from: '"Admin portal application" <ashuarena@gmail.com>',
+            to: email,
+            subject: 'Admin-Portal-App: Email Verification Code',
+            text: `Your verification code is ${otp}`
+        });
+  
+        return res.status(200).json({
+          message: "Your account has been created.",
+          user: {
+            email: newUser.email,
+            branch: newUser.branch,
+            userId: newUser.userId,
+            isVerified: newUser.isVerified,
+          },
+          isNewUser: true,
+        });
+      }
+
+      if(verifyOtp) {
+        const getUser = await User.findOne({ email, isVerified: false, verify_otp: verifyOtp });
+        if(!getUser) {
+          return res.status(400).send({ message: "Please provide correct OTP." });
+        }
+        const updatedUser = await User.findOneAndUpdate(
+          { email },
+          { isVerified: true, verify_otp: null },
+          { new: true }
+        );
+
+        const token = jwt.sign(
+            {
+              userId: updatedUser._id,
+              email: updatedUser.email,
+            },
+            "1234!@#%<{*&)",
+            { expiresIn: "24h" }
+          );
+    
+          res.cookie("auth", token, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "None" : "Lax",
+            maxAge: 24 * 60 * 60 * 1000,
+            path: "/",
+          });
+    
+          return res.status(201).json({ message: "You have been loggedIn!", user: updatedUser, token });
+      }
+  
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (passwordMatch) {
+  
+        const token = jwt.sign(
+          {
+            userId: user._id,
+            email: user.email,
+          },
+          "1234!@#%<{*&)",
+          { expiresIn: "24h" }
+        );
+  
+        res.cookie("auth", token, {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? "None" : "Lax",
+          maxAge: 24 * 60 * 60 * 1000,
+          path: "/",
+        });
+  
+        return res.status(201).json({ message: "You have been loggedIn!", user, token });
+      } else {
+        return res.status(401).send({ message: "Please provide correct password." });
+      }
+    } catch (error) {
+      console.error("Error while creating user:", error);
+      return res.status(500).json({ message: "Something went wrong.", error: error?.message });
+    }
+  });  
 
 routerUsers.post("/register", async (req, res) => {
     try {
@@ -141,7 +266,6 @@ routerUsers.post('/login', async (req, res) => {
 
         // Check If User Exists In The Database
         const user = await User.findOne({ email });
-        console.log({user});
         // Compare Passwords
         const passwordMatch = await bcrypt.compare(password, user.password);
 
@@ -159,12 +283,13 @@ routerUsers.post('/login', async (req, res) => {
             expiresIn: "24h",
         });
 
-        console.log({token});
         res.cookie("auth", token, {
-            httpOnly: true, // ✅ Prevents client-side access
-            secure: true, // ✅ Use HTTPS in production
-            sameSite: "Strict" // ✅ Prevents CSRF attacks
-        });
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "None" : "Lax",
+            maxAge: 24 * 60 * 60 * 1000,
+            path: "/"
+          });
 
         return res
             .status(200)
@@ -290,7 +415,7 @@ routerUsers.get("/adminInfo", async (req, res) => {
             adminRoles: adminRoles[0]?.roles || [],
             classes: classes[0]?.classes || [],
             subjects: subjects[0]?.subjectClass || [],
-            getBirthDayInMonth
+            getBirthDayInMonth,
         });
 
     } catch (error) {
@@ -298,6 +423,50 @@ routerUsers.get("/adminInfo", async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+routerUsers.get("/notifications", async (req, res) => {
+  try {
+    const notifications = await SchoolNotifications.aggregate([
+      // Step 1: Add a formatted string date (e.g., "2025-09-01")
+      {
+        $addFields: {
+          dateOnly: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$date" // assuming `date` is the timestamp field
+            }
+          }
+        }
+      },
+      // Step 2: Sort all documents by date descending (latest messages first)
+      {
+        $sort: {
+          date: -1
+        }
+      },
+      // Step 3: Group by the string date
+      {
+        $group: {
+          _id: "$dateOnly",
+          messages: { $push: "$$ROOT" }
+        }
+      },
+      {
+        $sort: {
+          dateAsDate: -1
+        }
+      }
+    ]);
+    
+      return res
+          .status(200)
+          .json({ notifications });
+  } catch (error) {
+      return res
+          .status(403)
+          .json({error: error?.errmsg});
+  }
+})
 
 routerUsers.route("/class-teacher")
     .post(async (req, res) => {
@@ -384,8 +553,13 @@ routerUsers.route("/attendance")
     })
 
 routerUsers.get("/logout", (req, res) => {
-    console.log("Logout route hit");
-    res.clearCookie("auth", { httpOnly: true, secure: true, sameSite: "Strict" });
+    res.clearCookie("auth", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "None" : "Lax",
+      domain: "192.168.1.10", // <- required if it was set this way
+      path: "/", // <- ensure it matches too
+    });
     return res.json({ message: "Logged out successfully" });
 });
 

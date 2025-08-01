@@ -1,10 +1,9 @@
 const jwt = require("jsonwebtoken");
 
 exports.verifyToken = async (req, res, next) => {
-  console.log("Verifying token...", req);
   try {
     const token = req.cookies.auth;
-
+    console.log({token});
     if (!token) {
       return res.status(403).json({ error: "Unauthorized" });
     }
