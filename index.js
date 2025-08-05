@@ -20,7 +20,7 @@ const { routerUsers } = require('./routes/users');
 const { routerFee } = require('./routes/fee');
 const { routerSchool } = require('./routes/school');
 
-const { SchoolNotifications } = require('./routes/schema/School/school');
+const { SchoolNotifications, SchoolInbox } = require('./routes/schema/School/school');
 
 // const MONGO_URI_LOCAL = "mongodb://127.0.0.1:27017/signups-testing";
 const MONGO_URI_CLOUD = "mongodb+srv://ashuarena:arenaashu@cluster0.teyrnb7.mongodb.net/my-academy?retryWrites=true&w=majority&appName=Cluster0"
@@ -87,6 +87,25 @@ io.on("connection", (socket) => {
     );
   });
 
+  socket.on("send_inbox_message", (data) => {
+    console.log("Message received:", data);
+    io.emit("notification", data.message !== '');
+    const response = new SchoolInbox({
+      message: data.message || 'Test message',
+      date: new Date(),
+      userId: data?.userId,
+      email: data?.email
+    });
+    response.save()
+      .then(() => {
+        console.log("Message saved successfully");
+      })
+      .catch((error) => {
+        console.error("Error saving notification:", error);
+      }
+    );
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
@@ -96,6 +115,6 @@ io.on("connection", (socket) => {
 //   console.log("Listening on 3001");
 // });
 
-server.listen(port, '192.168.1.10', () => {
-  console.log("✅ Server and WebSocket listening on http://192.168.1.10:3001");
+server.listen(port, '192.168.1.4', () => {
+  console.log("✅ Server and WebSocket listening on http://192.168.1.11:3001");
 });

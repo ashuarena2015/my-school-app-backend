@@ -54,12 +54,22 @@ const SchoolNotificationsSchema = new mongoose.Schema(
   }
 );
 
+const SchoolInboxSchema = new mongoose.Schema(
+  {
+    message: { type: String, required: true },
+    date: { type: Date, default: Date.now },
+    userId: { type: String, required: true },
+    email: { type: String, required: true }
+  }
+);
+
 const SchoolBranch = mongoose.model("branch", SchoolBranchSchema);
 const SchoolClasses = mongoose.model("class", SchoolClassesSchema);
 const SchoolSubjects = mongoose.model("subject", SchoolSubjectsSchema);
 const SchoolSubjectClassTeacher = mongoose.model("subjectclassteacher", SchoolSubjectClassTeacherSchema);
 const SchoolStudentAttendance = mongoose.model("studentattendance", SchoolStudentAttendanceSchema);
 const SchoolNotifications = mongoose.model("notifications", SchoolNotificationsSchema);
+const SchoolInbox = mongoose.model("inbox", SchoolInboxSchema);
 
 
-module.exports ={ SchoolBranch, SchoolClasses, SchoolSubjects, SchoolSubjectClassTeacher, SchoolStudentAttendance, SchoolNotifications };
+module.exports ={ SchoolBranch, SchoolClasses, SchoolSubjects, SchoolSubjectClassTeacher, SchoolStudentAttendance, SchoolNotifications, SchoolInbox };

@@ -47,7 +47,7 @@ routerUsers.post("/", async (req, res) => {
         let students = [];
 
         if (userAll) {
-            const query = designation ? { designation }
+            const query = designation && designation !== 'all' ? { designation }
             : {
                 designation: {
                     $nin: ['', null, ''],
@@ -397,6 +397,8 @@ routerUsers.get("/adminInfo", async (req, res) => {
                   userType: 1,
                   designation: 1,
                   dob: 1,
+                  email: 1,
+                  userId: 1,
                   _id: 0 // Exclude _id field if not needed
                 }
             }
@@ -557,7 +559,7 @@ routerUsers.get("/logout", (req, res) => {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "None" : "Lax",
-      domain: "192.168.1.10", // <- required if it was set this way
+      domain: "192.168.1.11", // <- required if it was set this way
       path: "/", // <- ensure it matches too
     });
     return res.json({ message: "Logged out successfully" });
