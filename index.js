@@ -72,14 +72,14 @@ io.on("connection", (socket) => {
 
   socket.on("send_message", (data) => {
     console.log("Message received:", data);
-    io.emit("notification", data.message !== '');
+    io.emit("message", data);
     const response = new SchoolNotifications({
       message: data.message || 'Test message',
       date: new Date(),
     });
     response.save()
       .then(() => {
-        console.log("Notification saved successfully");
+        console.log("Message saved successfully");
       })
       .catch((error) => {
         console.error("Error saving notification:", error);
@@ -89,7 +89,7 @@ io.on("connection", (socket) => {
 
   socket.on("send_inbox_message", (data) => {
     console.log("Message received:", data);
-    io.emit("notification", data.message !== '');
+    io.emit("notification", data);
     const response = new SchoolInbox({
       message: data.message || 'Test message',
       date: new Date(),
@@ -104,6 +104,11 @@ io.on("connection", (socket) => {
         console.error("Error saving notification:", error);
       }
     );
+  });
+
+  socket.on("check_online", (data) => {
+    console.log("Message received:", data);
+    io.emit("onlineUser", data);
   });
 
   socket.on("disconnect", () => {
