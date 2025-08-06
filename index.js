@@ -67,6 +67,8 @@ const io = new Server(server, {
   },
 });
 
+let onlineUsers = [];
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
@@ -107,12 +109,23 @@ io.on("connection", (socket) => {
   });
 
   socket.on("check_online", (data) => {
-    console.log("Message received:", data);
-    io.emit("onlineUser", data);
+    console.log("User connected:", data?.email);
+
+    // Avoid adding duplicates
+    if (!onlineUsers.includes(data?.email)) {
+      onlineUsers.push(data?.email);
+    }
+
+    console.log("Online users:", onlineUsers);
+
+    // Emit updated list to all clients
+    io.emit("onlineUser", onlineUsers);
   });
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+  socket.on("check_offline", (email) => {
+    const updatedEmails = onlineUsers.filter(user => user !== email);
+    onlineUsers = updatedEmails;
+    io.emit("offlineUser", updatedEmails);
   });
 });
 

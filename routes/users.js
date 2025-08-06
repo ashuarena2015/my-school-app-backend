@@ -559,7 +559,7 @@ routerUsers.get("/logout", (req, res) => {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "None" : "Lax",
-      domain: "192.168.1.11", // <- required if it was set this way
+      domain: "192.168.1.4", // <- required if it was set this way
       path: "/", // <- ensure it matches too
     });
     return res.json({ message: "Logged out successfully" });
