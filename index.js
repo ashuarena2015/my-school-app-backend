@@ -19,6 +19,7 @@ const __dirname = dirname(__filename);
 const { routerUsers } = require('./routes/users');
 const { routerFee } = require('./routes/fee');
 const { routerSchool } = require('./routes/school');
+const { routerChat } = require('./routes/chats');
 
 const { SchoolNotifications, SchoolInbox } = require('./routes/schema/School/school');
 
@@ -59,6 +60,7 @@ console.log(mongoose.connection.name);
 app.use("/api/school", routerSchool);
 app.use("/api/user", routerUsers);
 app.use("/api/fee", routerFee);
+app.use("/api/chat", routerChat);
 
 const io = new Server(server, {
   cors: {
@@ -127,12 +129,19 @@ io.on("connection", (socket) => {
     onlineUsers = updatedEmails;
     io.emit("offlineUser", updatedEmails);
   });
+
+
+  socket.on("start_chat", (data, chatRoomId) => {
+    console.log("start_chat: ", data, chatRoomId);
+    io.emit("startChat", data, chatRoomId);
+  });
+
 });
 
 // app.listen(port, '192.168.1.10', () => {
 //   console.log("Listening on 3001");
 // });
 
-server.listen(port, '192.168.1.4', () => {
-  console.log("✅ Server and WebSocket listening on http://192.168.1.11:3001");
+server.listen(port, '192.168.1.8', () => {
+  console.log("✅ Server and WebSocket listening on http://192.168.1.8:3001");
 });
